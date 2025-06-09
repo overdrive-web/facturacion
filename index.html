@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Generador de PDF para Guías de Despacho</title>
+    <link rel="icon" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" type="image/x-icon">
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -105,12 +106,12 @@
         #guidesTable {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 30mm;
+            margin-top: 30px;
             font-size: 0.9rem;
         }
         #guidesTable th, #guidesTable td {
             border: 1px solid #e2e8f0;
-            padding: 12px;
+            padding: 8px;
             text-align: left;
         }
         #guidesTable th {
@@ -237,80 +238,80 @@
         function generatePDF(data) {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF({
-                orientation: 'portrait', // Cambiado a orientación vertical
+                orientation: 'portrait',
                 unit: 'mm',
-                format: [210, 500] // Tamaño personalizado: 210mm ancho x 500mm alto
+                format: [210, 297] // Tamaño carta (210mm x 297mm)
             });
             const margin = 10;
             let y = margin;
             const pageWidth = doc.internal.pageSize.getWidth();
             const maxWidth = pageWidth - 2 * margin;
+            const columnWidth = maxWidth / 2 - 5; // Dos columnas con pequeño espacio
 
             const addText = (text, x, y, fontSize = 10, maxWidth = 190, bold = false) => {
                 doc.setFont("helvetica", bold ? "bold" : "normal");
                 doc.setFontSize(fontSize);
                 const lines = doc.splitTextToSize(text, maxWidth);
                 doc.text(lines, x, y);
-                return y + (lines.length * fontSize * 0.4);
+                return y + (lines.length * fontSize * 0.3); // Reducido espacio entre líneas
             };
 
             // Título con folio a la derecha
             doc.setFillColor(230, 240, 255);
-            doc.rect(0, 0, pageWidth, 30, "F");
+            doc.rect(0, 0, pageWidth, 20, "F");
             doc.setTextColor(26, 115, 232);
             doc.setFont("helvetica", "bold");
             const titleX = margin;
             const folioX = pageWidth - margin - 30;
-            y = addText("Guía de Despacho Electrónica", titleX, y + 5, 18, maxWidth - 40);
+            y = addText("Guía de Despacho Electrónica", titleX, y + 5, 14, maxWidth - 40);
             doc.text(`Folio: ${data.folio}`, folioX, y + 5, { align: "right" });
             y += 5;
 
+            // Información del Documento (2 columnas, 2 filas)
             doc.setFillColor(245, 245, 245);
-            doc.rect(margin, y, maxWidth, 10, "F");
+            doc.rect(margin, y, maxWidth, 15, "F"); // Altura reducida
             doc.setTextColor(0, 0, 0);
-            y = addText("Información del Documento", margin + 5, y + 7, 12, maxWidth, true);
-            doc.setFont("helvetica", "normal");
-            y = addText(`Tipo DTE: ${data.tipoDTE}`, margin, y, 10, maxWidth);
-            y = addText(`Folio: ${data.folio}`, margin, y, 10, maxWidth);
-            y = addText(`Fecha Emisión: ${data.fechaEmision}`, margin, y, 10, maxWidth);
-            y = addText(`Fecha Vencimiento: ${data.fechaVencimiento || "-"}`, margin, y, 10, maxWidth);
+            y = addText("Información del Documento", margin + 5, y + 5, 10, columnWidth, true);
+            y = addText(`Tipo DTE: ${data.tipoDTE}`, margin + columnWidth + 10, y, 8, columnWidth);
+            y = addText(`Folio: ${data.folio}`, margin + 5, y + 3, 8, columnWidth); // Espacio reducido
+            y = addText(`Fecha Emisión: ${data.fechaEmision}`, margin + columnWidth + 10, y, 8, columnWidth);
+            y = addText(`Fecha Vencimiento: ${data.fechaVencimiento || "-"}`, margin + 5, y + 3, 8, columnWidth);
+            y += 5; // Espacio reducido entre secciones
+
+            // Emisor (2 columnas, 2 filas)
+            doc.setFillColor(245, 245, 245);
+            doc.rect(margin, y, maxWidth, 15, "F");
+            y = addText("Emisor", margin + 5, y + 5, 10, columnWidth, true);
+            y = addText(`RUT: ${data.emisor.rut}`, margin + columnWidth + 10, y, 8, columnWidth);
+            y = addText(`Razón Social: ${data.emisor.razonSocial}`, margin + 5, y + 3, 8, columnWidth);
+            y = addText(`Giro: ${data.emisor.giro}`, margin + columnWidth + 10, y, 8, columnWidth);
             y += 5;
 
+            // Receptor (2 columnas, 2 filas)
             doc.setFillColor(245, 245, 245);
-            doc.rect(margin, y, maxWidth, 10, "F");
-            y = addText("Emisor", margin + 5, y + 7, 12, maxWidth, true);
-            doc.setFont("helvetica", "normal");
-            y = addText(`RUT: ${data.emisor.rut}`, margin, y, 10, maxWidth);
-            y = addText(`Razón Social: ${data.emisor.razonSocial}`, margin, y, 10, maxWidth);
-            y = addText(`Giro: ${data.emisor.giro}`, margin, y, 10, maxWidth - 10);
-            y = addText(`Dirección: ${data.emisor.direccion}, ${data.emisor.comuna}, ${data.emisor.ciudad}`, margin, y, 10, maxWidth - 10);
+            doc.rect(margin, y, maxWidth, 15, "F");
+            y = addText("Receptor", margin + 5, y + 5, 10, columnWidth, true);
+            y = addText(`RUT: ${data.receptor.rut}`, margin + columnWidth + 10, y, 8, columnWidth);
+            y = addText(`Razón Social: ${data.receptor.razonSocial}`, margin + 5, y + 3, 8, columnWidth);
+            y = addText(`Giro: ${data.receptor.giro}`, margin + columnWidth + 10, y, 8, columnWidth);
             y += 5;
 
+            // Transporte (2 columnas, 1 fila)
             doc.setFillColor(245, 245, 245);
             doc.rect(margin, y, maxWidth, 10, "F");
-            y = addText("Receptor", margin + 5, y + 7, 12, maxWidth, true);
-            doc.setFont("helvetica", "normal");
-            y = addText(`RUT: ${data.receptor.rut}`, margin, y, 10, maxWidth);
-            y = addText(`Razón Social: ${data.receptor.razonSocial}`, margin, y, 10, maxWidth);
-            y = addText(`Giro: ${data.receptor.giro}`, margin, y, 10, maxWidth);
-            y = addText(`Dirección: ${data.receptor.direccion}, ${data.receptor.comuna}, ${data.receptor.ciudad}`, margin, y, 10, maxWidth - 10);
+            y = addText("Transporte", margin + 5, y + 5, 10, columnWidth, true);
+            y = addText(`Dirección Destino: ${data.transporte.direccionDestino}, ${data.transporte.comunaDestino}, ${data.transporte.ciudadDestino}`, margin + columnWidth + 10, y, 8, columnWidth);
             y += 5;
 
+            // Detalles de los Ítems
             doc.setFillColor(245, 245, 245);
             doc.rect(margin, y, maxWidth, 10, "F");
-            y = addText("Transporte", margin + 5, y + 7, 12, maxWidth, true);
-            doc.setFont("helvetica", "normal");
-            y = addText(`Dirección Destino: ${data.transporte.direccionDestino}, ${data.transporte.comunaDestino}, ${data.transporte.ciudadDestino}`, margin, y, 10, maxWidth - 10);
-            y += 5;
-
-            doc.setFillColor(245, 245, 245);
-            doc.rect(margin, y, maxWidth, 10, "F");
-            y = addText("Detalles de los Ítems", margin + 5, y + 7, 12, maxWidth, true);
+            y = addText("Detalles de los Ítems", margin + 5, y + 5, 10, maxWidth, true);
             doc.setFont("helvetica", "normal");
 
             const headers = ["#", "Código", "Descripción", "Cantidad", "Unidad", "Precio", "Monto", "Lote", "Vencimiento"];
-            const colWidths = [20, 35, 60, 25, 20, 25, 25, 35, 80];
-            const colSpacing = 5;
+            const colWidths = [10, 20, 50, 15, 15, 15, 15, 20, 25]; // Ajustados para caber en carta
+            const colSpacing = 1;
             let x = margin;
             doc.setFillColor(200, 200, 200);
             doc.rect(margin, y, maxWidth, 7, "F");
@@ -325,6 +326,18 @@
                 x = margin;
                 const descLines = doc.splitTextToSize(item.nombre, colWidths[2]);
                 const rowHeight = Math.max(descLines.length * 4, 10);
+                if (y + rowHeight > doc.internal.pageSize.getHeight() - margin) {
+                    doc.addPage();
+                    y = margin;
+                    x = margin;
+                    doc.setFillColor(200, 200, 200);
+                    doc.rect(margin, y, maxWidth, 7, "F");
+                    headers.forEach((header, i) => {
+                        doc.text(header, x + 2, y + 5, { maxWidth: colWidths[i] });
+                        x += colWidths[i] + colSpacing;
+                    });
+                    y += 7;
+                }
                 doc.setFillColor(index % 2 === 0 ? 255 : 240, 245, 255);
                 doc.rect(margin, y, maxWidth, rowHeight, "F");
                 doc.text(item.numeroLinea, x + 2, y + (rowHeight / 2), { maxWidth: colWidths[0], align: "center" });
@@ -351,20 +364,20 @@
             y += 5;
             doc.setFillColor(245, 245, 245);
             doc.rect(margin, y, maxWidth, 10, "F");
-            y = addText("Totales", margin + 5, y + 7, 12, maxWidth, true);
+            y = addText("Totales", margin + 5, y + 5, 10, maxWidth, true);
             doc.setFont("helvetica", "normal");
-            y = addText(`Monto Exento: ${data.totales.montoExento}`, margin, y, 10, maxWidth);
-            y = addText(`Monto Total: ${data.totales.montoTotal}`, margin, y, 10, maxWidth);
+            y = addText(`Monto Exento: ${data.totales.montoExento}`, margin, y + 3, 8, maxWidth);
+            y = addText(`Monto Total: ${data.totales.montoTotal}`, margin, y + 3, 8, maxWidth);
             y += 5;
 
             if (data.referencia.folioRef) {
                 doc.setFillColor(245, 245, 245);
                 doc.rect(margin, y, maxWidth, 10, "F");
-                y = addText("Referencia", margin + 5, y + 7, 12, maxWidth, true);
+                y = addText("Referencia", margin + 5, y + 5, 10, maxWidth, true);
                 doc.setFont("helvetica", "normal");
-                y = addText(`Tipo Doc. Ref.: ${data.referencia.tipoDocRef}`, margin, y, 10, maxWidth);
-                y = addText(`Folio Ref.: ${data.referencia.folioRef}`, margin, y, 10, maxWidth);
-                y = addText(`Fecha Ref.: ${data.referencia.fechaRef}`, margin, y, 10, maxWidth);
+                y = addText(`Tipo Doc. Ref.: ${data.referencia.tipoDocRef}`, margin, y + 3, 8, maxWidth);
+                y = addText(`Folio Ref.: ${data.referencia.folioRef}`, margin, y + 3, 8, maxWidth);
+                y = addText(`Fecha Ref.: ${data.referencia.fechaRef}`, margin, y + 3, 8, maxWidth);
             }
 
             return doc;
