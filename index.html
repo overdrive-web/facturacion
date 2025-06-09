@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Generador de PDF</title>
-    <link rel="icon" href="img/favicon-32x32.png" type="image/png"> <!-- Línea actualizada -->
+    <link rel="icon" href="img/favicon-32x32.png" type="image/png">
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -204,7 +204,6 @@
         </table>
     </div>
     <script>
-        // Configuración de Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyAw4a7k-ARXN6pW67oyZlYfadXX6QWLJ14",
             authDomain: "facturacion-c22de.firebaseapp.com",
@@ -215,11 +214,16 @@
             measurementId: "G-VE2R46WP9J"
         };
 
-        // Inicializar Firebase
-        firebase.initializeApp(firebaseConfig);
+        try {
+            firebase.initializeApp(firebaseConfig);
+        } catch (error) {
+            alert("Error al inicializar Firebase: " + error.message);
+        }
         const db = firebase.firestore();
 
-        // Elementos del DOM
+        db.enablePersistence()
+            .catch((error) => alert("Error al habilitar persistencia: " + error.message));
+
         const xmlFileInput = document.getElementById("xmlFileInput");
         const visualizarBtn = document.getElementById("visualizarBtn");
         const descargarBtn = document.getElementById("descargarBtn");
@@ -234,13 +238,12 @@
         let pdfDoc = null;
         let invoiceData = null;
 
-        // Función para generar el PDF
         function generatePDF(data) {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF({
                 orientation: 'portrait',
                 unit: 'mm',
-                format: [210, 297] // Tamaño carta (210mm x 297mm)
+                format: [210, 297]
             });
             const margin = 10;
             let y = margin;
@@ -255,32 +258,28 @@
                 return y + (lines.length * fontSize * 0.3);
             };
 
-            // Título con folio
             doc.setFont("helvetica", "bold");
             doc.setFontSize(16);
-            doc.text(`Guía de Despacho Electrónica ${data.folio}`, margin, y + 10);
+            doc.text(`Guía de Despacho Electrónica ${data.folio || 'Sin Folio'}`, margin, y + 10);
             y += 15;
 
-            // Información del Documento
             doc.setFillColor(245, 245, 245);
             doc.rect(margin, y, maxWidth, 15, "F");
             doc.setTextColor(0, 0, 0);
             y = addText("Información del Documento", margin + 5, y + 5, 10, maxWidth, true);
-            y = addText(`Folio: ${data.folio}`, margin + 5, y + 3, 10);
+            y = addText(`Folio: ${data.folio || "-"}`, margin + 5, y + 3, 10);
             y = addText(`Fecha de Vencimiento: ${data.fechaVencimiento || "-"}`, margin + 5, y + 3, 10);
-            y = addText(`Fecha de Emisión: ${data.fechaEmision}`, margin + 5, y + 3, 10);
+            y = addText(`Fecha de Emisión: ${data.fechaEmision || "-"}`, margin + 5, y + 3, 10);
             y += 15;
 
-            // Emisor
             doc.setFillColor(245, 245, 245);
             doc.rect(margin, y, maxWidth, 15, "F");
             doc.setTextColor(0, 0, 0);
             y = addText("Emisor", margin + 5, y + 5, 10, maxWidth, true);
-            y = addText(`Razón Social: ${data.emisor.razonSocial}`, margin + 5, y + 3, 10);
-            y = addText(`RUT: ${data.emisor.rut}`, margin + 5, y + 3, 10);
+            y = addText(`Razón Social: ${data.emisor?.razonSocial || "-"}`, margin + 5, y + 3, 10);
+            y = addText(`RUT: ${data.emisor?.rut || "-"}`, margin + 5, y + 3, 10);
             y += 15;
 
-            // Detalles de los Ítems
             doc.setFillColor(245, 245, 245);
             doc.rect(margin, y, maxWidth, 10, "F");
             y = addText("Detalles de los Ítems", margin + 5, y + 5, 10, maxWidth, true);
@@ -299,9 +298,9 @@
             });
             y += 7;
 
-            data.detalles.forEach((item, index) => {
+            (data.detalles || []).forEach((item, index) => {
                 x = margin;
-                const descLines = doc.splitTextToSize(item.nombre, colWidths[2]);
+                const descLines = doc.splitTextToSize(item.nombre || "-", colWidths[2]);
                 const rowHeight = Math.max(descLines.length * 4, 10);
                 if (y + rowHeight > doc.internal.pageSize.getHeight() - margin) {
                     doc.addPage();
@@ -317,16 +316,16 @@
                 }
                 doc.setFillColor(index % 2 === 0 ? 255 : 240, 245, 255);
                 doc.rect(margin, y, maxWidth, rowHeight, "F");
-                doc.text(item.numeroLinea, x + 2, y + (rowHeight / 2), { maxWidth: colWidths[0], align: "center" });
+                doc.text(item.numeroLinea || "-", x + 2, y + (rowHeight / 2), { maxWidth: colWidths[0], align: "center" });
                 x += colWidths[0] + colSpacing;
-                doc.text(item.codigo, x + 2, y + (rowHeight / 2), { maxWidth: colWidths[1], align: "center" });
+                doc.text(item.codigo || "-", x + 2, y + (rowHeight / 2), { maxWidth: colWidths[1], align: "center" });
                 x += colWidths[1] + colSpacing;
                 doc.text(descLines, x + 2, y + (rowHeight / 2), { maxWidth: colWidths[2] });
                 x += colWidths[2] + colSpacing;
                 const roundedQuantity = Math.round(parseFloat(item.cantidad) || 0);
                 doc.text(roundedQuantity.toString(), x + 2, y + (rowHeight / 2), { maxWidth: colWidths[3], align: "center" });
                 x += colWidths[3] + colSpacing;
-                doc.text(item.descripcion || "-", x + 2, y + (rowHeight / 2), { maxWidth: colWidths[4], align: "center" });
+                doc.text(item.descripción || "-", x + 2, y + (rowHeight / 2), { maxWidth: colWidths[4], align: "center" });
                 x += colWidths[4] + colSpacing;
                 doc.text(item.fechaVencimiento || "-", x + 2, y + (rowHeight / 2), { maxWidth: colWidths[5], align: "center" });
                 y += rowHeight;
@@ -335,20 +334,13 @@
             return doc;
         }
 
-        // Función para guardar en Firebase
         function saveToFirebase(data) {
             const guiaRef = db.collection("guias_despacho").doc(data.folio);
             guiaRef.set(data)
-                .then(() => {
-                    console.log("Guía guardada en Firebase con folio: ", data.folio);
-                    loadRazonSocialOptions();
-                })
-                .catch((error) => {
-                    console.error("Error al guardar en Firebase: ", error);
-                });
+                .then(() => loadRazonSocialOptions())
+                .catch((error) => alert("Error al guardar la guía: " + error.message));
         }
 
-        // Función para cargar y mostrar guías
         function loadGuides(razonSocial = null) {
             guidesBody.innerHTML = "";
             let query = db.collection("guias_despacho");
@@ -357,30 +349,32 @@
             }
             query.get()
                 .then((querySnapshot) => {
-                    querySnapshot.forEach((doc) => {
-                        const data = doc.data();
-                        const row = document.createElement("tr");
-                        row.innerHTML = `
-                            <td>${data.folio}</td>
-                            <td>${data.fechaEmision}</td>
-                            <td><button class="viewBtn" data-folio="${data.folio}">Visualizar</button></td>
-                        `;
-                        guidesBody.appendChild(row);
-                    });
+                    if (querySnapshot.empty) {
+                        guidesBody.innerHTML = '<tr><td colspan="3">No se encontraron guías.</td></tr>';
+                    } else {
+                        querySnapshot.forEach((doc) => {
+                            const data = doc.data();
+                            const row = document.createElement("tr");
+                            row.innerHTML = `
+                                <td>${data.folio || "-"}</td>
+                                <td>${data.fechaEmision || "-"}</td>
+                                <td><button class="viewBtn" data-folio="${data.folio}">Visualizar</button></td>
+                            `;
+                            guidesBody.appendChild(row);
+                        });
+                    }
                     guidesTable.classList.remove("hidden");
                 })
-                .catch((error) => {
-                    console.error("Error al cargar guías: ", error);
-                });
+                .catch((error) => alert("Error al cargar guías: " + error.message));
         }
 
-        // Función para cargar opciones de Razón Social
         function loadRazonSocialOptions() {
             db.collection("guias_despacho").get()
                 .then((querySnapshot) => {
                     const razonSocials = new Set();
                     querySnapshot.forEach((doc) => {
-                        razonSocials.add(doc.data().emisor.razonSocial);
+                        const razonSocial = doc.data().emisor?.razonSocial;
+                        if (razonSocial) razonSocials.add(razonSocial);
                     });
                     razonSocialSelect.innerHTML = '<option value="">Seleccione una Razón Social</option>';
                     razonSocials.forEach((razonSocial) => {
@@ -390,12 +384,9 @@
                         razonSocialSelect.appendChild(option);
                     });
                 })
-                .catch((error) => {
-                    console.error("Error al cargar opciones de Razón Social: ", error);
-                });
+                .catch((error) => alert("Error al cargar opciones de Razón Social: " + error.message));
         }
 
-        // Manejar la subida del archivo XML
         xmlFileInput.addEventListener("change", function(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -403,7 +394,6 @@
             const reader = new FileReader();
             reader.onload = function(e) {
                 const xmlString = e.target.result;
-
                 const parser = new DOMParser();
                 const xmlDoc = parser.parseFromString(xmlString, "text/xml");
 
@@ -413,6 +403,11 @@
                 }
 
                 const encabezado = xmlDoc.querySelector("Encabezado");
+                if (!encabezado) {
+                    alert("El archivo XML no contiene un elemento <Encabezado>.");
+                    return;
+                }
+
                 const idDoc = encabezado.querySelector("IdDoc");
                 const emisor = encabezado.querySelector("Emisor");
                 const receptor = encabezado.querySelector("Receptor");
@@ -421,7 +416,18 @@
                 const detalles = xmlDoc.querySelectorAll("Detalle");
                 const referencia = xmlDoc.querySelector("Referencia");
 
-                const getText = (node, tag) => node.querySelector(tag)?.textContent || "";
+                if (!idDoc || !emisor || !receptor || !totales) {
+                    alert("El archivo XML no contiene todos los elementos requeridos (IdDoc, Emisor, Receptor, Totales).");
+                    return;
+                }
+
+                const getText = (node, tag) => {
+                    if (!node) {
+                        return "";
+                    }
+                    const element = node.querySelector(tag);
+                    return element ? element.textContent : "";
+                };
 
                 invoiceData = {
                     tipoDTE: getText(idDoc, "TipoDTE"),
@@ -489,7 +495,6 @@
             reader.readAsText(file);
         });
 
-        // Visualizar PDF en modo fullscreen
         function showPDF(data) {
             pdfDoc = generatePDF(data);
             const pdfDataUri = pdfDoc.output("datauristring");
@@ -499,14 +504,12 @@
             closeViewerBtn.classList.remove("hidden");
         }
 
-        // Cerrar visualización
         closeViewerBtn.addEventListener("click", () => {
             pdfViewer.classList.remove("fullscreen");
             pdfViewer.style.display = "none";
             closeViewerBtn.classList.add("hidden");
         });
 
-        // Visualizar PDF desde botón principal
         visualizarBtn.addEventListener("click", () => {
             if (!pdfDoc) {
                 alert("Primero sube un archivo XML válido.");
@@ -515,19 +518,16 @@
             showPDF(invoiceData);
         });
 
-        // Descargar PDF
         descargarBtn.addEventListener("click", () => {
             if (!pdfDoc) {
                 alert("Primero sube un archivo XML válido.");
                 return;
             }
-            pdfDoc.save(`Guia_Despacho_${invoiceData.folio}.pdf`);
+            pdfDoc.save(`Guia_Despacho_${invoiceData.folio || "sin_folio"}.pdf`);
         });
 
-        // Cargar guías
         loadGuidesBtn.addEventListener("click", () => loadGuides());
 
-        // Visualizar guía seleccionada
         guidesBody.addEventListener("click", (e) => {
             if (e.target.classList.contains("viewBtn")) {
                 const folio = e.target.getAttribute("data-folio");
@@ -539,13 +539,10 @@
                             alert("Guía no encontrada.");
                         }
                     })
-                    .catch((error) => {
-                        console.error("Error al cargar la guía: ", error);
-                    });
+                    .catch((error) => alert("Error al cargar la guía: " + error.message));
             }
         });
 
-        // Buscar por Razón Social
         razonSocialSelect.addEventListener("change", (e) => {
             const razonSocial = e.target.value;
             if (razonSocial) {
@@ -555,7 +552,6 @@
             }
         });
 
-        // Buscar por Folio
         searchFolioBtn.addEventListener("click", () => {
             const folio = folioInput.value.trim();
             if (folio) {
@@ -567,15 +563,12 @@
                             alert("Guía no encontrada con ese folio.");
                         }
                     })
-                    .catch((error) => {
-                        console.error("Error al buscar la guía: ", error);
-                    });
+                    .catch((error) => alert("Error al buscar la guía: " + error.message));
             } else {
                 alert("Por favor, ingrese un folio.");
             }
         });
 
-        // Cargar opciones de Razón Social al iniciar
         loadRazonSocialOptions();
     </script>
 </body>
