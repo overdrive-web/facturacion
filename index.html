@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generador de PDF para Guías de Despacho</title>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f9;
+            color: #333;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #1a73e8;
+            text-align: center;
+        }
+        .file-input {
+            margin: 20px 0;
+            text-align: center;
+        }
+        input[type="file"] {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .buttons {
+            text-align: center;
+            margin: 20px 0;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 0 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+        #visualizarBtn {
+            background-color: #1a73e8;
+            color: white;
+        }
+        #visualizarBtn:hover {
+            background-color: #1557b0;
+        }
+        #descargarBtn {
+            background-color: #34c759;
+            color: white;
+        }
+        #descargarBtn:hover {
+            background-color: #28a745;
+        }
+        #loadGuidesBtn {
+            background-color: #6c757d;
+            color: white;
+        }
+        #loadGuidesBtn:hover {
+            background-color: #5a6268;
+        }
+        #pdfViewer {
+            width: 100%;
+            height: 600px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-top: 20px;
+            display: none;
+        }
+        #pdfViewer.fullscreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 90%;
+            height: 90%;
+            z-index: 1000;
+            background: white;
+            padding: 20px;
+        }
+        #guidesTable {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        #guidesTable th, #guidesTable td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        #guidesTable th {
+            background-color: #f2f2f2;
+        }
+        #guidesTable tr:hover {
+            background-color: #f5f5f5;
+        }
+        .hidden {
+            display: none;
+        }
+        .search-section {
+            margin: 20px 0;
+            text-align: center;
+        }
+        select, input {
+            padding: 8px;
+            margin: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button.close-btn {
+            background-color: #dc3545;
+            color: white;
+            position: absolute;
+            top: 10px;
+            right: 10px;
+        }
+        button.close-btn:hover {
+            background-color: #c82333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Generador de PDF para Guías de Despacho</h1>
+        <div class="file-input">
+            <input type="file" id="xmlFileInput" accept=".xml" />
+            <p>Selecciona un archivo XML (ejemplo: 658171.xml) para generar el PDF.</p>
+        </div>
+        <div class="buttons">
+            <button id="visualizarBtn" disabled>Visualizar PDF</button>
+            <button id="descargarBtn" disabled>Descargar PDF</button>
+            <button id="loadGuidesBtn">Cargar Guías</button>
+        </div>
+        <div class="search-section">
+            <label for="razonSocialSelect">Razón Social:</label>
+            <select id="razonSocialSelect">
+                <option value="">Seleccione una Razón Social</option>
+            </select>
+            <label for="folioInput">Folio:</label>
+            <input type="text" id="folioInput" placeholder="Ingrese un folio">
+            <button id="searchFolioBtn">Buscar</button>
+        </div>
+        <iframe id="pdfViewer"></iframe>
+        <button id="closeViewerBtn" class="close-btn hidden">Cerrar</button>
+        <table id="guidesTable" class="hidden">
+            <thead>
+                <tr>
+                    <th>Folio</th>
+                    <th>Fecha Emisión</th>
+                    <th>Acción</th>
+                </tr>
+            </thead>
+            <tbody id="guidesBody"></tbody>
+        </table>
+    </div>
+    <script>
+        // Configuración de Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyAw4a7k-ARXN6pW67oyZlYfadXX6QWLJ14",
+            authDomain: "facturacion-c22de.firebaseapp.com",
+            projectId: "facturacion-c22de",
+            storageBucket: "facturacion-c22de.firebasestorage.app",
+            messagingSenderId: "410627443791",
+            appId: "1:410627443791:web:d77399341a087727bcae3a",
+            measurementId: "G-VE2R46WP9J"
+        };
+
+        // Inicializar Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // Elementos del DOM
+        const xmlFileInput = document.getElementById("xmlFileInput");
+        const visualizarBtn = document.getElementById("visualizarBtn");
+        const descargarBtn = document.getElementById("descargarBtn");
+        const pdfViewer = document.getElementById("pdfViewer");
+        const loadGuidesBtn = document.getElementById("loadGuidesBtn");
+        const guidesTable = document.getElementById("guidesTable");
+        const guidesBody = document.getElementById("guidesBody");
+        const closeViewerBtn = document.getElementById("closeViewerBtn");
+        const razonSocialSelect = document.getElementById("razonSocialSelect");
+        const folioInput = document.getElementById("folioInput");
+        const searchFolioBtn = document.getElementById("searchFolioBtn");
+        let pdfDoc = null;
+        let invoiceData = null;
+
+        // Función para generar el PDF
+        function generatePDF(data) {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({
+                orientation: 'landscape',
+                unit: 'mm',
+                format: [300, 210]
+            });
+            const margin = 10;
+            let y = margin;
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const maxWidth = pageWidth - 2 * margin;
+
+            const addText = (text, x, y, fontSize = 10, maxWidth = 190, bold = false) => {
+                doc.setFont("helvetica", bold ? "bold" : "normal");
+                doc.setFontSize(fontSize);
+                const lines = doc.splitTextToSize(text, maxWidth);
+                doc.text(lines, x, y);
+                return y + (lines.length * fontSize * 0.4);
+            };
+
+            doc.setFillColor(230, 240, 255);
+            doc.rect(0, 0, pageWidth, 30, "F");
+            doc.setTextColor(26, 115, 232);
+            doc.setFont("helvetica", "bold");
+            y = addText("Guía de Despacho Electrónica", margin, y + 5, 18, maxWidth);
+            y += 5;
+
+            doc.setFillColor(245, 245, 245);
+            doc.rect(margin, y, maxWidth, 10, "F");
+            doc.setTextColor(0, 0, 0);
+            y = addText("Información del Documento", margin + 5, y + 7, 12, maxWidth, true);
+            doc.setFont("helvetica", "normal");
+            y = addText(`Tipo DTE: ${data.tipoDTE}`, margin, y, 10, maxWidth);
+            y = addText(`Folio: ${data.folio}`, margin, y, 10, maxWidth);
+            y = addText(`Fecha Emisión: ${data.fechaEmision}`, margin, y, 10, maxWidth);
+            y = addText(`Fecha Vencimiento: ${data.fechaVencimiento || "-"}`, margin, y, 10, maxWidth);
+            y += 5;
+
+            doc.setFillColor(245, 245, 245);
+            doc.rect(margin, y, maxWidth, 10, "F");
+            y = addText("Emisor", margin + 5, y + 7, 12, maxWidth, true);
+            doc.setFont("helvetica", "normal");
+            y = addText(`RUT: ${data.emisor.rut}`, margin, y, 10, maxWidth);
+            y = addText(`Razón Social: ${data.emisor.razonSocial}`, margin, y, 10, maxWidth);
+            y = addText(`Giro: ${data.emisor.giro}`, margin, y, 10, maxWidth - 10);
+            y = addText(`Dirección: ${data.emisor.direccion}, ${data.emisor.comuna}, ${data.emisor.ciudad}`, margin, y, 10, maxWidth - 10);
+            y += 5;
+
+            doc.setFillColor(245, 245, 245);
+            doc.rect(margin, y, maxWidth, 10, "F");
+            y = addText("Receptor", margin + 5, y + 7, 12, maxWidth, true);
+            doc.setFont("helvetica", "normal");
+            y = addText(`RUT: ${data.receptor.rut}`, margin, y, 10, maxWidth);
+            y = addText(`Razón Social: ${data.receptor.razonSocial}`, margin, y, 10, maxWidth);
+            y = addText(`Giro: ${data.receptor.giro}`, margin, y, 10, maxWidth);
+            y = addText(`Dirección: ${data.receptor.direccion}, ${data.receptor.comuna}, ${data.receptor.ciudad}`, margin, y, 10, maxWidth - 10);
+            y += 5;
+
+            doc.setFillColor(245, 245, 245);
+            doc.rect(margin, y, maxWidth, 10, "F");
+            y = addText("Transporte", margin + 5, y + 7, 12, maxWidth, true);
+            doc.setFont("helvetica", "normal");
+            y = addText(`Dirección Destino: ${data.transporte.direccionDestino}, ${data.transporte.comunaDestino}, ${data.transporte.ciudadDestino}`, margin, y, 10, maxWidth - 10);
+            y += 5;
+
+            doc.setFillColor(245, 245, 245);
+            doc.rect(margin, y, maxWidth, 10, "F");
+            y = addText("Detalles de los Ítems", margin + 5, y + 7, 12, maxWidth, true);
+            doc.setFont("helvetica", "normal");
+
+            const headers = ["#", "Código", "Descripción", "Cantidad", "Unidad", "Precio", "Monto", "Lote", "Vencimiento"];
+            const colWidths = [15, 35, 50, 20, 20, 20, 20, 30, 40];
+            let x = margin;
+            doc.setFillColor(200, 200, 200);
+            doc.rect(margin, y, maxWidth, 7, "F");
+            doc.setTextColor(0, 0, 0);
+            headers.forEach((header, i) => {
+                doc.text(header, x + 2, y + 5, { maxWidth: colWidths[i] });
+                x += colWidths[i];
+            });
+            y += 7;
+
+            data.detalles.forEach((item, index) => {
+                if (y > doc.internal.pageSize.getHeight() - 20) {
+                    doc.addPage();
+                    y = margin;
+                    x = margin;
+                    doc.setFillColor(200, 200, 200);
+                    doc.rect(margin, y, maxWidth, 7, "F");
+                    headers.forEach((header, i) => {
+                        doc.text(header, x + 2, y + 5, { maxWidth: colWidths[i] });
+                        x += colWidths[i];
+                    });
+                    y += 7;
+                }
+                x = margin;
+                const descLines = doc.splitTextToSize(item.nombre, colWidths[2]);
+                const rowHeight = Math.max(descLines.length * 4, 10);
+                doc.setFillColor(index % 2 === 0 ? 255 : 240, 245, 255);
+                doc.rect(margin, y, maxWidth, rowHeight, "F");
+                doc.text(item.numeroLinea, x + 2, y + (rowHeight / 2), { maxWidth: colWidths[0], align: "center" });
+                x += colWidths[0];
+                doc.text(item.codigo, x + 2, y + (rowHeight / 2), { maxWidth: colWidths[1], align: "center" });
+                x += colWidths[1];
+                doc.text(descLines, x + 2, y + (rowHeight / 2), { maxWidth: colWidths[2] });
+                x += colWidths[2];
+                doc.text(item.cantidad, x + 2, y + (rowHeight / 2), { maxWidth: colWidths[3], align: "center" });
+                x += colWidths[3];
+                doc.text(item.unidad, x + 2, y + (rowHeight / 2), { maxWidth: colWidths[4], align: "center" });
+                x += colWidths[4];
+                doc.text(item.precio || "-", x + 2, y + (rowHeight / 2), { maxWidth: colWidths[5], align: "center" });
+                x += colWidths[5];
+                doc.text(item.monto, x + 2, y + (rowHeight / 2), { maxWidth: colWidths[6], align: "center" });
+                x += colWidths[6];
+                doc.text(item.descripcion || "-", x + 2, y + (rowHeight / 2), { maxWidth: colWidths[7], align: "center" });
+                x += colWidths[7];
+                doc.text(item.fechaVencimiento || "-", x + 2, y + (rowHeight / 2), { maxWidth: colWidths[8], align: "center" });
+                y += rowHeight;
+            });
+
+            if (y > doc.internal.pageSize.getHeight() - 30) {
+                doc.addPage();
+                y = margin;
+            }
+            y += 5;
+            doc.setFillColor(245, 245, 245);
+            doc.rect(margin, y, maxWidth, 10, "F");
+            y = addText("Totales", margin + 5, y + 7, 12, maxWidth, true);
+            doc.setFont("helvetica", "normal");
+            y = addText(`Monto Exento: ${data.totales.montoExento}`, margin, y, 10, maxWidth);
+            y = addText(`Monto Total: ${data.totales.montoTotal}`, margin, y, 10, maxWidth);
+            y += 5;
+
+            if (data.referencia.folioRef) {
+                if (y > doc.internal.pageSize.getHeight() - 30) {
+                    doc.addPage();
+                    y = margin;
+                }
+                doc.setFillColor(245, 245, 245);
+                doc.rect(margin, y, maxWidth, 10, "F");
+                y = addText("Referencia", margin + 5, y + 7, 12, maxWidth, true);
+                doc.setFont("helvetica", "normal");
+                y = addText(`Tipo Doc. Ref.: ${data.referencia.tipoDocRef}`, margin, y, 10, maxWidth);
+                y = addText(`Folio Ref.: ${data.referencia.folioRef}`, margin, y, 10, maxWidth);
+                y = addText(`Fecha Ref.: ${data.referencia.fechaRef}`, margin, y, 10, maxWidth);
+            }
+
+            return doc;
+        }
+
+        // Función para guardar en Firebase
+        function saveToFirebase(data) {
+            const guiaRef = db.collection("guias_despacho").doc(data.folio);
+            guiaRef.set(data)
+                .then(() => {
+                    console.log("Guía guardada en Firebase con folio: ", data.folio);
+                    loadRazonSocialOptions(); // Actualizar opciones tras guardar
+                })
+                .catch((error) => {
+                    console.error("Error al guardar en Firebase: ", error);
+                });
+        }
+
+        // Función para cargar y mostrar guías
+        function loadGuides(razonSocial = null) {
+            guidesBody.innerHTML = "";
+            let query = db.collection("guias_despacho");
+            if (razonSocial) {
+                query = query.where("emisor.razonSocial", "==", razonSocial);
+            }
+            query.get()
+                .then((querySnapshot) => {
+                    querySnapshot.forEach((doc) => {
+                        const data = doc.data();
+                        const row = document.createElement("tr");
+                        row.innerHTML = `
+                            <td>${data.folio}</td>
+                            <td>${data.fechaEmision}</td>
+                            <td><button class="viewBtn" data-folio="${data.folio}">Visualizar</button></td>
+                        `;
+                        guidesBody.appendChild(row);
+                    });
+                    guidesTable.classList.remove("hidden");
+                })
+                .catch((error) => {
+                    console.error("Error al cargar guías: ", error);
+                });
+        }
+
+        // Función para cargar opciones de Razón Social
+        function loadRazonSocialOptions() {
+            db.collection("guias_despacho").get()
+                .then((querySnapshot) => {
+                    const razonSocials = new Set();
+                    querySnapshot.forEach((doc) => {
+                        razonSocials.add(doc.data().emisor.razonSocial);
+                    });
+                    razonSocialSelect.innerHTML = '<option value="">Seleccione una Razón Social</option>';
+                    razonSocials.forEach((razonSocial) => {
+                        const option = document.createElement("option");
+                        option.value = razonSocial;
+                        option.textContent = razonSocial;
+                        razonSocialSelect.appendChild(option);
+                    });
+                })
+                .catch((error) => {
+                    console.error("Error al cargar opciones de Razón Social: ", error);
+                });
+        }
+
+        // Manejar la subida del archivo XML
+        xmlFileInput.addEventListener("change", function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const xmlString = e.target.result;
+
+                const parser = new DOMParser();
+                const xmlDoc = parser.parseFromString(xmlString, "text/xml");
+
+                if (!xmlDoc.querySelector("DTE")) {
+                    alert("El archivo XML no es un DTE válido.");
+                    return;
+                }
+
+                const encabezado = xmlDoc.querySelector("Encabezado");
+                const idDoc = encabezado.querySelector("IdDoc");
+                const emisor = encabezado.querySelector("Emisor");
+                const receptor = encabezado.querySelector("Receptor");
+                const transporte = encabezado.querySelector("Transporte");
+                const totales = encabezado.querySelector("Totales");
+                const detalles = xmlDoc.querySelectorAll("Detalle");
+                const referencia = xmlDoc.querySelector("Referencia");
+
+                const getText = (node, tag) => node.querySelector(tag)?.textContent || "";
+
+                invoiceData = {
+                    tipoDTE: getText(idDoc, "TipoDTE"),
+                    folio: getText(idDoc, "Folio"),
+                    fechaEmision: getText(idDoc, "FchEmis"),
+                    tipoDespacho: getText(idDoc, "TipoDespacho"),
+                    indTraslado: getText(idDoc, "IndTraslado"),
+                    formaPago: getText(idDoc, "FmaPago"),
+                    fechaVencimiento: getText(idDoc, "FchVenc"),
+                    emisor: {
+                        rut: getText(emisor, "RUTEmisor"),
+                        razonSocial: getText(emisor, "RznSoc"),
+                        giro: getText(emisor, "GiroEmis"),
+                        actividad: getText(emisor, "Acteco"),
+                        codigoSucursal: getText(emisor, "CdgSIISucur"),
+                        direccion: getText(emisor, "DirOrigen"),
+                        comuna: getText(emisor, "CmnaOrigen"),
+                        ciudad: getText(emisor, "CiudadOrigen")
+                    },
+                    receptor: {
+                        rut: getText(receptor, "RUTRecep"),
+                        codigoInterno: getText(receptor, "CdgIntRecep"),
+                        razonSocial: getText(receptor, "RznSocRecep"),
+                        giro: getText(receptor, "GiroRecep"),
+                        direccion: getText(receptor, "DirRecep"),
+                        comuna: getText(receptor, "CmnaRecep"),
+                        ciudad: getText(receptor, "CiudadRecep")
+                    },
+                    transporte: {
+                        direccionDestino: getText(transporte, "DirDest"),
+                        comunaDestino: getText(transporte, "CmnaDest"),
+                        ciudadDestino: getText(transporte, "CiudadDest")
+                    },
+                    totales: {
+                        montoExento: getText(totales, "MntExe"),
+                        montoTotal: getText(totales, "MntTotal")
+                    },
+                    detalles: Array.from(detalles).map(detalle => ({
+                        numeroLinea: getText(detalle, "NroLinDet"),
+                        codigo: getText(detalle.querySelector("CdgItem"), "VlrCodigo"),
+                        nombre: getText(detalle, "NmbItem"),
+                        descripcion: getText(detalle, "DscItem"),
+                        cantidad: getText(detalle, "QtyItem"),
+                        unidad: getText(detalle, "UnmdItem"),
+                        precio: getText(detalle, "PrcItem"),
+                        monto: getText(detalle, "MontoItem"),
+                        fechaVencimiento: getText(detalle, "FchVencim")
+                    })),
+                    referencia: {
+                        numeroLinea: getText(referencia, "NroLinRef"),
+                        tipoDocRef: getText(referencia, "TpoDocRef"),
+                        folioRef: getText(referencia, "FolioRef"),
+                        fechaRef: getText(referencia, "FchRef")
+                    },
+                    timestamp: new Date().toISOString()
+                };
+
+                saveToFirebase(invoiceData);
+
+                visualizarBtn.disabled = false;
+                descargarBtn.disabled = false;
+
+                pdfDoc = generatePDF(invoiceData);
+            };
+            reader.readAsText(file);
+        });
+
+        // Visualizar PDF en modo fullscreen
+        function showPDF(data) {
+            pdfDoc = generatePDF(data);
+            const pdfDataUri = pdfDoc.output("datauristring");
+            pdfViewer.src = pdfDataUri;
+            pdfViewer.classList.add("fullscreen");
+            pdfViewer.style.display = "block";
+            closeViewerBtn.classList.remove("hidden");
+        }
+
+        // Cerrar visualización
+        closeViewerBtn.addEventListener("click", () => {
+            pdfViewer.classList.remove("fullscreen");
+            pdfViewer.style.display = "none";
+            closeViewerBtn.classList.add("hidden");
+        });
+
+        // Visualizar PDF desde botón principal
+        visualizarBtn.addEventListener("click", () => {
+            if (!pdfDoc) {
+                alert("Primero sube un archivo XML válido.");
+                return;
+            }
+            showPDF(invoiceData);
+        });
+
+        // Descargar PDF
+        descargarBtn.addEventListener("click", () => {
+            if (!pdfDoc) {
+                alert("Primero sube un archivo XML válido.");
+                return;
+            }
+            pdfDoc.save(`Guia_Despacho_${invoiceData.folio}.pdf`);
+        });
+
+        // Cargar guías
+        loadGuidesBtn.addEventListener("click", () => loadGuides());
+
+        // Visualizar guía seleccionada
+        guidesBody.addEventListener("click", (e) => {
+            if (e.target.classList.contains("viewBtn")) {
+                const folio = e.target.getAttribute("data-folio");
+                db.collection("guias_despacho").doc(folio).get()
+                    .then((doc) => {
+                        if (doc.exists) {
+                            showPDF(doc.data());
+                        } else {
+                            alert("Guía no encontrada.");
+                        }
+                    })
+                    .catch((error) => {
+                        console.error("Error al cargar la guía: ", error);
+                    });
+            }
+        });
+
+        // Buscar por Razón Social
+        razonSocialSelect.addEventListener("change", (e) => {
+            const razonSocial = e.target.value;
+            if (razonSocial) {
+                loadGuides(razonSocial);
+            } else {
+                loadGuides();
+            }
+        });
+
+        // Buscar por Folio
+        searchFolioBtn.addEventListener("click", () => {
+            const folio = folioInput.value.trim();
+            if (folio) {
+                db.collection("guias_despacho").doc(folio).get()
+                    .then((doc) => {
+                        if (doc.exists) {
+                            showPDF(doc.data());
+                        } else {
+                            alert("Guía no encontrada con ese folio.");
+                        }
+                    })
+                    .catch((error) => {
+                        console.error("Error al buscar la guía: ", error);
+                    });
+            } else {
+                alert("Por favor, ingrese un folio.");
+            }
+        });
+
+        // Cargar opciones de Razón Social al iniciar
+        loadRazonSocialOptions();
+    </script>
+</body>
+</html>
