@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Generador de PDF para Guías de Despacho</title>
-    <link rel="icon" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" type="image/x-icon">
+    <title>Generador de PDF</title>
+    <link rel="icon" href="img/favicon-32x32.png" type="image/png"> <!-- Línea actualizada -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -246,62 +246,39 @@
             let y = margin;
             const pageWidth = doc.internal.pageSize.getWidth();
             const maxWidth = pageWidth - 2 * margin;
-            const columnWidth = maxWidth / 2 - 5; // Dos columnas con pequeño espacio
 
             const addText = (text, x, y, fontSize = 10, maxWidth = 190, bold = false) => {
                 doc.setFont("helvetica", bold ? "bold" : "normal");
                 doc.setFontSize(fontSize);
                 const lines = doc.splitTextToSize(text, maxWidth);
                 doc.text(lines, x, y);
-                return y + (lines.length * fontSize * 0.3); // Reducido espacio entre líneas
+                return y + (lines.length * fontSize * 0.3);
             };
 
-            // Título con folio a la derecha
-            doc.setFillColor(230, 240, 255);
-            doc.rect(0, 0, pageWidth, 20, "F");
-            doc.setTextColor(26, 115, 232);
+            // Título con folio
             doc.setFont("helvetica", "bold");
-            const titleX = margin;
-            const folioX = pageWidth - margin - 30;
-            y = addText("Guía de Despacho Electrónica", titleX, y + 5, 14, maxWidth - 40);
-            doc.text(`Folio: ${data.folio}`, folioX, y + 5, { align: "right" });
-            y += 5;
+            doc.setFontSize(16);
+            doc.text(`Guía de Despacho Electrónica ${data.folio}`, margin, y + 10);
+            y += 15;
 
-            // Información del Documento (2 columnas, 2 filas)
+            // Información del Documento
             doc.setFillColor(245, 245, 245);
-            doc.rect(margin, y, maxWidth, 15, "F"); // Altura reducida
+            doc.rect(margin, y, maxWidth, 15, "F");
             doc.setTextColor(0, 0, 0);
-            y = addText("Información del Documento", margin + 5, y + 5, 10, columnWidth, true);
-            y = addText(`Tipo DTE: ${data.tipoDTE}`, margin + columnWidth + 10, y, 8, columnWidth);
-            y = addText(`Folio: ${data.folio}`, margin + 5, y + 3, 8, columnWidth); // Espacio reducido
-            y = addText(`Fecha Emisión: ${data.fechaEmision}`, margin + columnWidth + 10, y, 8, columnWidth);
-            y = addText(`Fecha Vencimiento: ${data.fechaVencimiento || "-"}`, margin + 5, y + 3, 8, columnWidth);
-            y += 5; // Espacio reducido entre secciones
+            y = addText("Información del Documento", margin + 5, y + 5, 10, maxWidth, true);
+            y = addText(`Folio: ${data.folio}`, margin + 5, y + 3, 10);
+            y = addText(`Fecha de Vencimiento: ${data.fechaVencimiento || "-"}`, margin + 5, y + 3, 10);
+            y = addText(`Fecha de Emisión: ${data.fechaEmision}`, margin + 5, y + 3, 10);
+            y += 15;
 
-            // Emisor (2 columnas, 2 filas)
+            // Emisor
             doc.setFillColor(245, 245, 245);
             doc.rect(margin, y, maxWidth, 15, "F");
-            y = addText("Emisor", margin + 5, y + 5, 10, columnWidth, true);
-            y = addText(`RUT: ${data.emisor.rut}`, margin + columnWidth + 10, y, 8, columnWidth);
-            y = addText(`Razón Social: ${data.emisor.razonSocial}`, margin + 5, y + 3, 8, columnWidth);
-            y = addText(`Giro: ${data.emisor.giro}`, margin + columnWidth + 10, y, 8, columnWidth);
-            y += 5;
-
-            // Receptor (2 columnas, 2 filas)
-            doc.setFillColor(245, 245, 245);
-            doc.rect(margin, y, maxWidth, 15, "F");
-            y = addText("Receptor", margin + 5, y + 5, 10, columnWidth, true);
-            y = addText(`RUT: ${data.receptor.rut}`, margin + columnWidth + 10, y, 8, columnWidth);
-            y = addText(`Razón Social: ${data.receptor.razonSocial}`, margin + 5, y + 3, 8, columnWidth);
-            y = addText(`Giro: ${data.receptor.giro}`, margin + columnWidth + 10, y, 8, columnWidth);
-            y += 5;
-
-            // Transporte (2 columnas, 1 fila)
-            doc.setFillColor(245, 245, 245);
-            doc.rect(margin, y, maxWidth, 10, "F");
-            y = addText("Transporte", margin + 5, y + 5, 10, columnWidth, true);
-            y = addText(`Dirección Destino: ${data.transporte.direccionDestino}, ${data.transporte.comunaDestino}, ${data.transporte.ciudadDestino}`, margin + columnWidth + 10, y, 8, columnWidth);
-            y += 5;
+            doc.setTextColor(0, 0, 0);
+            y = addText("Emisor", margin + 5, y + 5, 10, maxWidth, true);
+            y = addText(`Razón Social: ${data.emisor.razonSocial}`, margin + 5, y + 3, 10);
+            y = addText(`RUT: ${data.emisor.rut}`, margin + 5, y + 3, 10);
+            y += 15;
 
             // Detalles de los Ítems
             doc.setFillColor(245, 245, 245);
@@ -309,8 +286,8 @@
             y = addText("Detalles de los Ítems", margin + 5, y + 5, 10, maxWidth, true);
             doc.setFont("helvetica", "normal");
 
-            const headers = ["#", "Código", "Descripción", "Cantidad", "Unidad", "Precio", "Monto", "Lote", "Vencimiento"];
-            const colWidths = [10, 20, 50, 15, 15, 15, 15, 20, 25]; // Ajustados para caber en carta
+            const headers = ["Nombre de Ítems", "Código", "Descripción", "Cantidad", "Lote", "Vencimiento"];
+            const colWidths = [30, 25, 50, 20, 30, 30];
             const colSpacing = 1;
             let x = margin;
             doc.setFillColor(200, 200, 200);
@@ -349,36 +326,11 @@
                 const roundedQuantity = Math.round(parseFloat(item.cantidad) || 0);
                 doc.text(roundedQuantity.toString(), x + 2, y + (rowHeight / 2), { maxWidth: colWidths[3], align: "center" });
                 x += colWidths[3] + colSpacing;
-                doc.text(item.unidad, x + 2, y + (rowHeight / 2), { maxWidth: colWidths[4], align: "center" });
+                doc.text(item.descripcion || "-", x + 2, y + (rowHeight / 2), { maxWidth: colWidths[4], align: "center" });
                 x += colWidths[4] + colSpacing;
-                doc.text(item.precio || "-", x + 2, y + (rowHeight / 2), { maxWidth: colWidths[5], align: "center" });
-                x += colWidths[5] + colSpacing;
-                doc.text(item.monto, x + 2, y + (rowHeight / 2), { maxWidth: colWidths[6], align: "center" });
-                x += colWidths[6] + colSpacing;
-                doc.text(item.descripcion || "-", x + 2, y + (rowHeight / 2), { maxWidth: colWidths[7], align: "center" });
-                x += colWidths[7] + colSpacing;
-                doc.text(item.fechaVencimiento || "-", x + 2, y + (rowHeight / 2), { maxWidth: colWidths[8], align: "center" });
+                doc.text(item.fechaVencimiento || "-", x + 2, y + (rowHeight / 2), { maxWidth: colWidths[5], align: "center" });
                 y += rowHeight;
             });
-
-            y += 5;
-            doc.setFillColor(245, 245, 245);
-            doc.rect(margin, y, maxWidth, 10, "F");
-            y = addText("Totales", margin + 5, y + 5, 10, maxWidth, true);
-            doc.setFont("helvetica", "normal");
-            y = addText(`Monto Exento: ${data.totales.montoExento}`, margin, y + 3, 8, maxWidth);
-            y = addText(`Monto Total: ${data.totales.montoTotal}`, margin, y + 3, 8, maxWidth);
-            y += 5;
-
-            if (data.referencia.folioRef) {
-                doc.setFillColor(245, 245, 245);
-                doc.rect(margin, y, maxWidth, 10, "F");
-                y = addText("Referencia", margin + 5, y + 5, 10, maxWidth, true);
-                doc.setFont("helvetica", "normal");
-                y = addText(`Tipo Doc. Ref.: ${data.referencia.tipoDocRef}`, margin, y + 3, 8, maxWidth);
-                y = addText(`Folio Ref.: ${data.referencia.folioRef}`, margin, y + 3, 8, maxWidth);
-                y = addText(`Fecha Ref.: ${data.referencia.fechaRef}`, margin, y + 3, 8, maxWidth);
-            }
 
             return doc;
         }
