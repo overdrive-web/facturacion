@@ -9,45 +9,53 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         body {
-            font-family: 'Arial', sans-serif;
+            font-family: 'Inter', 'Arial', sans-serif;
             margin: 0;
-            padding: 20px;
-            background-color: #f4f4f9;
-            color: #333;
+            padding: 30px;
+            background-color: #f8f9fa;
+            color: #2d3748;
+            line-height: 1.6;
         }
         .container {
-            max-width: 1000px;
+            max-width: 1100px;
             margin: 0 auto;
             background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
         }
         h1 {
             color: #1a73e8;
             text-align: center;
+            font-size: 2rem;
+            margin-bottom: 1.5rem;
         }
         .file-input {
-            margin: 20px 0;
+            margin: 30px 0;
             text-align: center;
         }
         input[type="file"] {
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
+            padding: 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            background: #fff;
+            font-size: 0.9rem;
         }
         .buttons {
             text-align: center;
-            margin: 20px 0;
+            margin: 30px 0;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
         }
         button {
-            padding: 10px 20px;
-            margin: 0 10px;
+            padding: 12px 24px;
             border: none;
-            border-radius: 4px;
+            border-radius: 6px;
             cursor: pointer;
-            font-size: 16px;
-            transition: background-color 0.3s;
+            font-size: 0.95rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
         }
         #visualizarBtn {
             background-color: #1a73e8;
@@ -55,6 +63,7 @@
         }
         #visualizarBtn:hover {
             background-color: #1557b0;
+            transform: translateY(-1px);
         }
         #descargarBtn {
             background-color: #34c759;
@@ -62,6 +71,7 @@
         }
         #descargarBtn:hover {
             background-color: #28a745;
+            transform: translateY(-1px);
         }
         #loadGuidesBtn {
             background-color: #6c757d;
@@ -69,63 +79,92 @@
         }
         #loadGuidesBtn:hover {
             background-color: #5a6268;
+            transform: translateY(-1px);
         }
         #pdfViewer {
             width: 100%;
-            height: 600px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            margin-top: 20px;
+            height: 700px;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            margin-top: 30px;
             display: none;
+            background: #fff;
         }
         #pdfViewer.fullscreen {
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 90%;
-            height: 90%;
+            top: 20px;
+            left: 20px;
+            width: calc(100% - 40px);
+            height: calc(100% - 40px);
             z-index: 1000;
             background: white;
             padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
         }
         #guidesTable {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 20px;
+            margin-top: 30mm;
+            font-size: 0.9rem;
         }
         #guidesTable th, #guidesTable td {
-            border: 1px solid #ddd;
-            padding: 8px;
+            border: 1px solid #e2e8f0;
+            padding: 12px;
             text-align: left;
         }
         #guidesTable th {
-            background-color: #f2f2f2;
+            background-color: #edf2f7;
+            font-weight: 600;
+            color: #2d3748;
         }
         #guidesTable tr:hover {
-            background-color: #f5f5f5;
+            background-color: #f7fafc;
         }
         .hidden {
             display: none;
         }
         .search-section {
-            margin: 20px 0;
+            margin: 30px 0;
             text-align: center;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            align-items: center;
         }
         select, input {
-            padding: 8px;
-            margin: 5px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
+            padding: 10px;
+            margin: 0;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            font-size: 0.9rem;
         }
         button.close-btn {
             background-color: #dc3545;
             color: white;
             position: absolute;
-            top: 10px;
-            right: 10px;
+            top: 15px;
+            right: 15px;
+            padding: 8px 16px;
         }
         button.close-btn:hover {
             background-color: #c82333;
+            transform: translateY(-1px);
+        }
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+            .buttons {
+                flex-direction: column;
+                gap: 10px;
+            }
+            .search-section {
+                flex-direction: column;
+            }
+            #pdfViewer {
+                height: 500px;
+            }
         }
     </style>
 </head>
@@ -198,9 +237,9 @@
         function generatePDF(data) {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF({
-                orientation: 'landscape',
+                orientation: 'portrait', // Cambiado a orientación vertical
                 unit: 'mm',
-                format: [300, 210]
+                format: [210, 500] // Tamaño personalizado: 210mm ancho x 500mm alto
             });
             const margin = 10;
             let y = margin;
@@ -221,8 +260,8 @@
             doc.setTextColor(26, 115, 232);
             doc.setFont("helvetica", "bold");
             const titleX = margin;
-            const folioX = pageWidth - margin - 30; // Ajuste para alinear el folio a la derecha
-            y = addText("Guía de Despacho Electrónica", titleX, y + 5, 18, maxWidth - 40); // Reducir maxWidth para dejar espacio al folio
+            const folioX = pageWidth - margin - 30;
+            y = addText("Guía de Despacho Electrónica", titleX, y + 5, 18, maxWidth - 40);
             doc.text(`Folio: ${data.folio}`, folioX, y + 5, { align: "right" });
             y += 5;
 
@@ -270,8 +309,8 @@
             doc.setFont("helvetica", "normal");
 
             const headers = ["#", "Código", "Descripción", "Cantidad", "Unidad", "Precio", "Monto", "Lote", "Vencimiento"];
-            const colWidths = [15, 30, 60, 25, 20, 25, 25, 35, 45]; // Ajustes en anchos
-            const colSpacing = 2; // Espaciado de 2 mm entre columnas
+            const colWidths = [20, 35, 60, 25, 20, 25, 25, 35, 80];
+            const colSpacing = 5;
             let x = margin;
             doc.setFillColor(200, 200, 200);
             doc.rect(margin, y, maxWidth, 7, "F");
@@ -283,18 +322,6 @@
             y += 7;
 
             data.detalles.forEach((item, index) => {
-                if (y > doc.internal.pageSize.getHeight() - 20) {
-                    doc.addPage();
-                    y = margin;
-                    x = margin;
-                    doc.setFillColor(200, 200, 200);
-                    doc.rect(margin, y, maxWidth, 7, "F");
-                    headers.forEach((header, i) => {
-                        doc.text(header, x + 2, y + 5, { maxWidth: colWidths[i] });
-                        x += colWidths[i] + colSpacing;
-                    });
-                    y += 7;
-                }
                 x = margin;
                 const descLines = doc.splitTextToSize(item.nombre, colWidths[2]);
                 const rowHeight = Math.max(descLines.length * 4, 10);
@@ -306,7 +333,6 @@
                 x += colWidths[1] + colSpacing;
                 doc.text(descLines, x + 2, y + (rowHeight / 2), { maxWidth: colWidths[2] });
                 x += colWidths[2] + colSpacing;
-                // Redondear cantidad a entero
                 const roundedQuantity = Math.round(parseFloat(item.cantidad) || 0);
                 doc.text(roundedQuantity.toString(), x + 2, y + (rowHeight / 2), { maxWidth: colWidths[3], align: "center" });
                 x += colWidths[3] + colSpacing;
@@ -322,10 +348,6 @@
                 y += rowHeight;
             });
 
-            if (y > doc.internal.pageSize.getHeight() - 30) {
-                doc.addPage();
-                y = margin;
-            }
             y += 5;
             doc.setFillColor(245, 245, 245);
             doc.rect(margin, y, maxWidth, 10, "F");
@@ -336,10 +358,6 @@
             y += 5;
 
             if (data.referencia.folioRef) {
-                if (y > doc.internal.pageSize.getHeight() - 30) {
-                    doc.addPage();
-                    y = margin;
-                }
                 doc.setFillColor(245, 245, 245);
                 doc.rect(margin, y, maxWidth, 10, "F");
                 y = addText("Referencia", margin + 5, y + 7, 12, maxWidth, true);
@@ -358,7 +376,7 @@
             guiaRef.set(data)
                 .then(() => {
                     console.log("Guía guardada en Firebase con folio: ", data.folio);
-                    loadRazonSocialOptions(); // Actualizar opciones tras guardar
+                    loadRazonSocialOptions();
                 })
                 .catch((error) => {
                     console.error("Error al guardar en Firebase: ", error);
