@@ -16,7 +16,7 @@
             color: #333;
         }
         .container {
-            max-width: 900px;
+            max-width: 1000px;
             margin: 0 auto;
             background: white;
             padding: 20px;
@@ -215,11 +215,15 @@
                 return y + (lines.length * fontSize * 0.4);
             };
 
+            // Título con folio a la derecha
             doc.setFillColor(230, 240, 255);
             doc.rect(0, 0, pageWidth, 30, "F");
             doc.setTextColor(26, 115, 232);
             doc.setFont("helvetica", "bold");
-            y = addText("Guía de Despacho Electrónica", margin, y + 5, 18, maxWidth);
+            const titleX = margin;
+            const folioX = pageWidth - margin - 30; // Ajuste para alinear el folio a la derecha
+            y = addText("Guía de Despacho Electrónica", titleX, y + 5, 18, maxWidth - 40); // Reducir maxWidth para dejar espacio al folio
+            doc.text(`Folio: ${data.folio}`, folioX, y + 5, { align: "right" });
             y += 5;
 
             doc.setFillColor(245, 245, 245);
@@ -266,14 +270,15 @@
             doc.setFont("helvetica", "normal");
 
             const headers = ["#", "Código", "Descripción", "Cantidad", "Unidad", "Precio", "Monto", "Lote", "Vencimiento"];
-            const colWidths = [15, 35, 50, 20, 20, 20, 20, 30, 40];
+            const colWidths = [15, 30, 60, 25, 20, 25, 25, 35, 45]; // Ajustes en anchos
+            const colSpacing = 2; // Espaciado de 2 mm entre columnas
             let x = margin;
             doc.setFillColor(200, 200, 200);
             doc.rect(margin, y, maxWidth, 7, "F");
             doc.setTextColor(0, 0, 0);
             headers.forEach((header, i) => {
                 doc.text(header, x + 2, y + 5, { maxWidth: colWidths[i] });
-                x += colWidths[i];
+                x += colWidths[i] + colSpacing;
             });
             y += 7;
 
@@ -286,7 +291,7 @@
                     doc.rect(margin, y, maxWidth, 7, "F");
                     headers.forEach((header, i) => {
                         doc.text(header, x + 2, y + 5, { maxWidth: colWidths[i] });
-                        x += colWidths[i];
+                        x += colWidths[i] + colSpacing;
                     });
                     y += 7;
                 }
@@ -296,21 +301,23 @@
                 doc.setFillColor(index % 2 === 0 ? 255 : 240, 245, 255);
                 doc.rect(margin, y, maxWidth, rowHeight, "F");
                 doc.text(item.numeroLinea, x + 2, y + (rowHeight / 2), { maxWidth: colWidths[0], align: "center" });
-                x += colWidths[0];
+                x += colWidths[0] + colSpacing;
                 doc.text(item.codigo, x + 2, y + (rowHeight / 2), { maxWidth: colWidths[1], align: "center" });
-                x += colWidths[1];
+                x += colWidths[1] + colSpacing;
                 doc.text(descLines, x + 2, y + (rowHeight / 2), { maxWidth: colWidths[2] });
-                x += colWidths[2];
-                doc.text(item.cantidad, x + 2, y + (rowHeight / 2), { maxWidth: colWidths[3], align: "center" });
-                x += colWidths[3];
+                x += colWidths[2] + colSpacing;
+                // Redondear cantidad a entero
+                const roundedQuantity = Math.round(parseFloat(item.cantidad) || 0);
+                doc.text(roundedQuantity.toString(), x + 2, y + (rowHeight / 2), { maxWidth: colWidths[3], align: "center" });
+                x += colWidths[3] + colSpacing;
                 doc.text(item.unidad, x + 2, y + (rowHeight / 2), { maxWidth: colWidths[4], align: "center" });
-                x += colWidths[4];
+                x += colWidths[4] + colSpacing;
                 doc.text(item.precio || "-", x + 2, y + (rowHeight / 2), { maxWidth: colWidths[5], align: "center" });
-                x += colWidths[5];
+                x += colWidths[5] + colSpacing;
                 doc.text(item.monto, x + 2, y + (rowHeight / 2), { maxWidth: colWidths[6], align: "center" });
-                x += colWidths[6];
+                x += colWidths[6] + colSpacing;
                 doc.text(item.descripcion || "-", x + 2, y + (rowHeight / 2), { maxWidth: colWidths[7], align: "center" });
-                x += colWidths[7];
+                x += colWidths[7] + colSpacing;
                 doc.text(item.fechaVencimiento || "-", x + 2, y + (rowHeight / 2), { maxWidth: colWidths[8], align: "center" });
                 y += rowHeight;
             });
