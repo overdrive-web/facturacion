@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -17,6 +18,7 @@
             color: #2d3748;
             line-height: 1.6;
         }
+
         .container {
             max-width: 1100px;
             margin: 0 auto;
@@ -25,16 +27,19 @@
             border-radius: 12px;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
         }
+
         h1 {
             color: #1a73e8;
             text-align: center;
             font-size: 2rem;
             margin-bottom: 1.5rem;
         }
+
         .file-input {
             margin: 30px 0;
             text-align: center;
         }
+
         input[type="file"] {
             padding: 12px;
             border: 1px solid #e2e8f0;
@@ -42,6 +47,7 @@
             background: #fff;
             font-size: 0.9rem;
         }
+
         .buttons {
             text-align: center;
             margin: 30px 0;
@@ -49,6 +55,7 @@
             justify-content: center;
             gap: 15px;
         }
+
         button {
             padding: 12px 24px;
             border: none;
@@ -58,30 +65,37 @@
             font-weight: 500;
             transition: all 0.3s ease;
         }
+
         #visualizarBtn {
             background-color: #1a73e8;
             color: white;
         }
+
         #visualizarBtn:hover {
             background-color: #1557b0;
             transform: translateY(-1px);
         }
+
         #descargarBtn {
             background-color: #34c759;
             color: white;
         }
+
         #descargarBtn:hover {
             background-color: #28a745;
             transform: translateY(-1px);
         }
+
         #loadGuidesBtn {
             background-color: #6c757d;
             color: white;
         }
+
         #loadGuidesBtn:hover {
             background-color: #5a6268;
             transform: translateY(-1px);
         }
+
         #pdfViewer {
             width: 100%;
             height: 700px;
@@ -91,6 +105,7 @@
             display: none;
             background: #fff;
         }
+
         #pdfViewer.fullscreen {
             position: fixed;
             top: 20px;
@@ -103,28 +118,35 @@
             border-radius: 8px;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
         }
+
         #guidesTable {
             width: 100%;
             border-collapse: collapse;
             margin-top: 30px;
             font-size: 0.9rem;
         }
-        #guidesTable th, #guidesTable td {
+
+        #guidesTable th,
+        #guidesTable td {
             border: 1px solid #e2e8f0;
             padding: 8px;
             text-align: left;
         }
+
         #guidesTable th {
             background-color: #edf2f7;
             font-weight: 600;
             color: #2d3748;
         }
+
         #guidesTable tr:hover {
             background-color: #f7fafc;
         }
+
         .hidden {
             display: none;
         }
+
         .search-section {
             margin: 30px 0;
             text-align: center;
@@ -133,13 +155,16 @@
             gap: 10px;
             align-items: center;
         }
-        select, input {
+
+        select,
+        input {
             padding: 10px;
             margin: 0;
             border: 1px solid #e2e8f0;
             border-radius: 6px;
             font-size: 0.9rem;
         }
+
         button.close-btn {
             background-color: #dc3545;
             color: white;
@@ -148,27 +173,33 @@
             right: 15px;
             padding: 8px 16px;
         }
+
         button.close-btn:hover {
             background-color: #c82333;
             transform: translateY(-1px);
         }
+
         @media (max-width: 768px) {
             .container {
                 padding: 20px;
             }
+
             .buttons {
                 flex-direction: column;
                 gap: 10px;
             }
+
             .search-section {
                 flex-direction: column;
             }
+
             #pdfViewer {
                 height: 500px;
             }
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <h1>Generador de PDF para Guías de Despacho</h1>
@@ -292,6 +323,10 @@
             doc.setFillColor(200, 200, 200);
             doc.rect(margin, y, maxWidth, 7, "F");
             doc.setTextColor(0, 0, 0);
+
+
+
+            // En la función generatePDF, cambia esta parte:
             headers.forEach((header, i) => {
                 doc.text(header, x + 2, y + 5, { maxWidth: colWidths[i] });
                 x += colWidths[i] + colSpacing;
@@ -325,7 +360,7 @@
                 const roundedQuantity = Math.round(parseFloat(item.cantidad) || 0);
                 doc.text(roundedQuantity.toString(), x + 2, y + (rowHeight / 2), { maxWidth: colWidths[3], align: "center" });
                 x += colWidths[3] + colSpacing;
-                doc.text(item.descripción || "-", x + 2, y + (rowHeight / 2), { maxWidth: colWidths[4], align: "center" });
+                doc.text(item.descripcion || "-", x + 2, y + (rowHeight / 2), { maxWidth: colWidths[4], align: "center" }); // Aquí mostramos el lote (DscItem)
                 x += colWidths[4] + colSpacing;
                 doc.text(item.fechaVencimiento || "-", x + 2, y + (rowHeight / 2), { maxWidth: colWidths[5], align: "center" });
                 y += rowHeight;
@@ -387,12 +422,12 @@
                 .catch((error) => alert("Error al cargar opciones de Razón Social: " + error.message));
         }
 
-        xmlFileInput.addEventListener("change", function(event) {
+        xmlFileInput.addEventListener("change", function (event) {
             const file = event.target.files[0];
             if (!file) return;
 
             const reader = new FileReader();
-            reader.onload = function(e) {
+            reader.onload = function (e) {
                 const xmlString = e.target.result;
                 const parser = new DOMParser();
                 const xmlDoc = parser.parseFromString(xmlString, "text/xml");
@@ -572,4 +607,5 @@
         loadRazonSocialOptions();
     </script>
 </body>
+
 </html>
